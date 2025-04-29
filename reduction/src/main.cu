@@ -74,5 +74,29 @@ int main(int argc, char *argv[])
     std::cout << "Average Runtime: " << avg_time_thread_linear << " ms" << std::endl;
     std::cout << "Achieved Bandwidth: " << bandwidth_thread_linear << " GB/s" << std::endl;
 
+
+    /***********************************************************
+     *                 3. Shared Memory Reduction              *            
+     ***********************************************************/
+
+    int device_id;
+    cudaGetDevice(&device_id);
+
+    cudaDeviceProp device_prop;
+    cudaGetDeviceProperties(&device_prop, device_id);
+
+    int shared_mem_per_thread = device_prop.sharedMemPerBlock / device_prop.maxThreadsPerBlock;
+
+    std::cout << "*************************************************" << std::endl;
+    std::cout << "*          Device Shared Memory Info            *" << std::endl;
+    std::cout << "*************************************************" << std::endl;
+
+    std::cout << "Device Name: " << device_prop.name << std::endl;
+    std::cout << "Total Global Memory: " << device_prop.totalGlobalMem / (1 << 20) << " MB" << std::endl;
+    std::cout << "Shared Memory Per Block: " << device_prop.sharedMemPerBlock / (1 << 10) << " KB" << std::endl;
+    std::cout << "Max Threads Per Block: " << device_prop.maxThreadsPerBlock << std::endl;
+    std::cout << "Max Threads Per Multiprocessor: " << device_prop.maxThreadsPerMultiProcessor << std::endl;
+    std::cout << "Shared Memory Per Thread: " << shared_mem_per_thread << " bytes" << std::endl;
+    
     return 0;
 }
