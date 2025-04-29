@@ -16,14 +16,9 @@ __global__ void reduce_thread_linear_kernel(float *arr, int arr_size)
 
 float reduce_thread_linear(thrust::device_vector<float> dev_arr, int arr_size)
 {
-    for (int i = arr_size / 2; i > 0; i /= 2)
-    {
-        int threads = std::min(MAX_BLOCK_SIZE, i);
-        int blocks = std::max(i/MAX_BLOCK_SIZE, 1);
-
-        reduce_thread_linear_kernel<<<blocks, threads>>>(dev_arr.data().get(), i);
-    }
-    cudaDeviceSynchronize();
+    reduce_thread_linear_kernel<<<MAX_GRID_SIZE, MAX_BLOCK_SIZE>>>(dev_arr.data().get(), arr_size);
+    reduce_vanilla_kernel<<<1, MAX_BLOCK_SIZE>>>(dev_arr.data().get(), MAX_BLOCK_SIZE*MAX_GRID_SIZE);
+    reduce_vanilla_kernel<<<1, 1>>>(dev_arr.data().get(), MAX_BLOCK_SIZE);
     float result = dev_arr[0];
     return result;
 }
