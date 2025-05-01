@@ -1,0 +1,7 @@
+Reduction Imp, Time (ms), Bandwidth (GB/s), Step Speedup, Total Speedup
+Vanilla,0.06841818,57.11687,,
+Thread Linear,0.03751488,104.2406,1.824,1.824
+Shared Mem,0.03099144,126.1401,1.210,2.208
+Shared Mem + Thread Linear,0.0163517,239.5355,1.895,4.184
+Shared Mem + Thread Linear + Warp Unroll,0.01616397,241.7591,1.012,4.233
+Shared Mem + Thread Linear + Full Unroll,0.01562337,251.5402,1.035,4.379
