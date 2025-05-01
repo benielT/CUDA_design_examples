@@ -4,6 +4,7 @@
 
 #include <chrono>
 #include <cuda_runtime.h>
+#include <fstream>
 
 int main(int argc, char *argv[])
 {
@@ -15,6 +16,17 @@ int main(int argc, char *argv[])
     const int num_iterations = 1000;
     size_t bytes_transferred = arr_size * sizeof(float);
 
+    std::string profile_filename = "profile_summary.csv";
+
+    std::ofstream fstream;
+    fstream.open(profile_filename, std::ios::out | std::ios::trunc);
+
+    if (!fstream.is_open()) {
+        std::cerr << "Error: Could not open the file " << profile_filename << std::endl;
+        return 1; // Indicate an error occurred
+    }
+
+    fstream << "Reduction Type,Array Size,Average Runtime (ms),Achieved Bandwidth (GB/s)\n";
 #ifndef NO_CPU
     /***********************************************************
      *                   0. CPU Reduction                      *            
@@ -38,6 +50,7 @@ int main(int argc, char *argv[])
     std::cout << "Array Size: " << arr_size << std::endl;
     std::cout << "Average Runtime: " << avg_time_cpu << " ms" << std::endl;
     std::cout << "Achieved Bandwidth: " << bandwidth_cpu << " GB/s" << std::endl;
+    fstream << "CPU," << arr_size << "," << avg_time_cpu << "," << bandwidth_cpu << "\n";
 #endif
 
 #ifndef NO_VANILLA
@@ -69,6 +82,7 @@ int main(int argc, char *argv[])
     std::cout << "Array Size: " << arr_size << std::endl;
     std::cout << "Average Runtime: " << avg_time_vanilla << " ms" << std::endl;
     std::cout << "Achieved Bandwidth: " << bandwidth_vanilla << " GB/s" << std::endl;
+    fstream << "Vanilla," << arr_size << "," << avg_time_vanilla << "," << bandwidth_vanilla << "\n";
 #endif
 
 #ifndef NO_THREAD_LINEAR
@@ -100,6 +114,7 @@ int main(int argc, char *argv[])
     std::cout << "Array Size: " << arr_size << std::endl;
     std::cout << "Average Runtime: " << avg_time_thread_linear << " ms" << std::endl;
     std::cout << "Achieved Bandwidth: " << bandwidth_thread_linear << " GB/s" << std::endl;
+    fstream << "Thread Linear," << arr_size << "," << avg_time_thread_linear << "," << bandwidth_thread_linear << "\n";
 #endif
 
 #ifndef NO_SHARED
@@ -134,6 +149,7 @@ int main(int argc, char *argv[])
     std::cout << "Array Size: " << arr_size << std::endl;
     std::cout << "Average Runtime: " << avg_time_shared << " ms" << std::endl;
     std::cout << "Achieved Bandwidth: " << bandwidth_shared << " GB/s" << std::endl;
+    fstream << "Shared Memory," << arr_size << "," << avg_time_shared << "," << bandwidth_shared << "\n";
 #endif
 
 #ifndef NO_SHARED_LINEAR
@@ -168,6 +184,7 @@ int main(int argc, char *argv[])
     std::cout << "Array Size: " << arr_size << std::endl;
     std::cout << "Average Runtime: " << avg_time_shared_linear << " ms" << std::endl;
     std::cout << "Achieved Bandwidth: " << bandwidth_shared_linear << " GB/s" << std::endl;
+    fstream << "Shared + Linear," << arr_size << "," << avg_time_shared_linear << "," << bandwidth_shared_linear << "\n";
 #endif
 
 #ifndef NO_WARP_UNROLL
@@ -202,6 +219,7 @@ int main(int argc, char *argv[])
     std::cout << "Array Size: " << arr_size << std::endl;
     std::cout << "Average Runtime: " << avg_time_warp_unroll << " ms" << std::endl;
     std::cout << "Achieved Bandwidth: " << bandwidth_warp_unroll << " GB/s" << std::endl;
+    fstream << "Shared + Linear + Warp Unroll," << arr_size << "," << avg_time_warp_unroll << "," << bandwidth_warp_unroll << "\n";
 #endif
 
 #ifndef NO_FULL_UNROLL
@@ -232,6 +250,16 @@ int main(int argc, char *argv[])
     std::cout << "Array Size: " << arr_size << std::endl;
     std::cout << "Average Runtime: " << avg_time_full_unroll << " ms" << std::endl;
     std::cout << "Achieved Bandwidth: " << bandwidth_full_unroll << " GB/s" << std::endl;
+    fstream << "Shared + Linear + Full Unroll," << arr_size << "," << avg_time_full_unroll << "," << bandwidth_full_unroll << "\n";
 #endif
+
+    fstream.close();
+
+    if (fstream.good()) { // Check if operations were successful after closing
+        std::cout << "Successfully wrote data to " << profile_filename << std::endl;
+    } else {
+        std::cerr << "Error occurred during writing to " << profile_filename << std::endl;
+        return 1; // Indicate an error occurred
+    }
     return 0;
 }
