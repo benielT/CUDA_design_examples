@@ -11,14 +11,13 @@ __global__ void reduce_thread_linear_kernel(float *arr, int arr_size)
     }
 
     arr[thread_id] = thread_sum;
-    __syncthreads();
 }
 
 float reduce_thread_linear(thrust::device_vector<float> dev_arr, int arr_size)
 {
     reduce_thread_linear_kernel<<<MAX_GRID_SIZE, MAX_BLOCK_SIZE>>>(dev_arr.data().get(), arr_size);
-    reduce_vanilla_kernel<<<1, MAX_BLOCK_SIZE>>>(dev_arr.data().get(), MAX_BLOCK_SIZE*MAX_GRID_SIZE);
-    reduce_vanilla_kernel<<<1, 1>>>(dev_arr.data().get(), MAX_BLOCK_SIZE);
+    reduce_thread_linear_kernel<<<1, MAX_BLOCK_SIZE>>>(dev_arr.data().get(), MAX_BLOCK_SIZE*MAX_GRID_SIZE);
+    reduce_thread_linear_kernel<<<1, 1>>>(dev_arr.data().get(), MAX_BLOCK_SIZE);
     float result = dev_arr[0];
     return result;
 }
