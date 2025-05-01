@@ -1,0 +1,11 @@
+Reduction Type,Array Size,Average Runtime (ms),Achieved Bandwidth (GB/s)
+Vanilla,16777216.0,0.1576936,396.3411
+Thread Linear,16777216.0,0.09951186,628.1227
+Shared Memory,16777216.0,0.2239382,279.1155
+Shared + Linear,16777216.0,0.07792045,802.3276
+Shared + Linear + Warp Unroll,16777216.0,0.07791205999999999,802.2152
+Shared + Linear + Full Unroll,16777216.0,0.07714151,810.323
+
+
+
+
