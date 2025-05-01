@@ -3,17 +3,17 @@
 template <unsigned int blockSize>
 __device__ inline void warp_reduce(volatile float *sdata, int tid)
 {
-    if constexpr (blockSize >= 64)
+    if (blockSize >= 64)
         sdata[tid] += sdata[tid + 32];
-    if constexpr (blockSize >= 32)
+    if (blockSize >= 32)
         sdata[tid] += sdata[tid + 16];
-    if constexpr (blockSize >= 16)
+    if (blockSize >= 16)
         sdata[tid] += sdata[tid + 8];
-    if constexpr (blockSize >= 8)
+    if (blockSize >= 8)
         sdata[tid] += sdata[tid + 4];
-    if constexpr (blockSize >= 4)
+    if (blockSize >= 4)
         sdata[tid] += sdata[tid + 2];
-    if constexpr (blockSize >= 2)
+    if (blockSize >= 2)
         sdata[tid] += sdata[tid + 1];
 }
 
@@ -41,19 +41,19 @@ __global__ void reduce_full_unroll_kernel(float *arr, float *block_sum, int arr_
     //     }
     //     __syncthreads();
     // }
-    if constexpr (blockSize >= 512){
+    if (blockSize >= 512){
         if (local_id < 256) {  
           shared_arr[local_id] += shared_arr[local_id + 256];
         }
         __syncthreads();
     }
-    if constexpr (blockSize >= 256){
+    if (blockSize >= 256){
         if (local_id < 128) {  
           shared_arr[local_id] += shared_arr[local_id + 128];
         }
         __syncthreads();
     }
-    if constexpr (blockSize >= 128){
+    if (blockSize >= 128){
         if (local_id < 64) {  
           shared_arr[local_id] += shared_arr[local_id + 64];
         }
