@@ -1,3 +1,3 @@
 #include <thrust/device_vector.h>
 
-float reduce_shared_linear(thrust::device_vector<float> dev_arr, thrust::device_vector<float> block_sum, int arr_size);
+void reduce_shared_linear(float* dev_arr, float* block_sum, int arr_size);

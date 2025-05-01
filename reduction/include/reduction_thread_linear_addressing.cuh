@@ -2,4 +2,4 @@
 
 #include <thrust/device_vector.h>
 
-float reduce_thread_linear(thrust::device_vector<float> dev_arr, int arr_size);
+void reduce_thread_linear(float* dev_arr, int arr_size);

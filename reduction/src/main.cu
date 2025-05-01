@@ -7,12 +7,12 @@
 
 int main(int argc, char *argv[])
 {
-    int arr_size = 1 << 24;
+    int arr_size = 1 << 22;
     thrust::device_vector<float> dev_arr(arr_size);
     thrust::host_vector<float> host_arr(arr_size);
     thrust::sequence(dev_arr.begin(), dev_arr.end());
 
-    const int num_iterations = 10000;
+    const int num_iterations = 1000;
     size_t bytes_transferred = arr_size * sizeof(float);
 
 #ifndef NO_CPU
@@ -30,7 +30,6 @@ int main(int argc, char *argv[])
         total_time_cpu += std::chrono::duration<float, std::milli>(end_cpu - start_cpu).count();
     }
     float avg_time_cpu = total_time_cpu / num_iterations;
-    // Calculate bandwidth
     float bandwidth_cpu = (bytes_transferred / (avg_time_cpu / 1000.0f)) / (1 << 30); // GB/s
     std::cout << "*************************************************" << std::endl;
     std::cout << "*                   CPU Reduction               *" << std::endl;
@@ -51,15 +50,15 @@ int main(int argc, char *argv[])
     for (int i = 0; i < num_iterations; ++i)
     {
         thrust::sequence(dev_arr.begin(), dev_arr.end());
+        auto dev_arr_ptr = thrust::raw_pointer_cast(dev_arr.data());
         auto start_vanilla = std::chrono::high_resolution_clock::now();
-        result_vanilla = reduce_vanilla(dev_arr, arr_size);
+        reduce_vanilla(dev_arr_ptr, arr_size);
         auto end_vanilla = std::chrono::high_resolution_clock::now();
+        result_vanilla = dev_arr[0];
         total_time_vanilla += std::chrono::duration<float, std::milli>(end_vanilla - start_vanilla).count();
     }
 
     float avg_time_vanilla = total_time_vanilla / num_iterations;
-
-    // Calculate bandwidth
     float bandwidth_vanilla = (bytes_transferred / (avg_time_vanilla / 1000.0f)) / (1 << 30); // GB/s
 
     std::cout << "*************************************************" << std::endl;
@@ -71,26 +70,26 @@ int main(int argc, char *argv[])
     std::cout << "Average Runtime: " << avg_time_vanilla << " ms" << std::endl;
     std::cout << "Achieved Bandwidth: " << bandwidth_vanilla << " GB/s" << std::endl;
 #endif
+
 #ifndef NO_THREAD_LINEAR
     /***********************************************************
      *           2. Thread Linear Addressing Reduction         *            
      ***********************************************************/
-
     float total_time_thread_linear = 0.0f;
     float result_thread_linear = 0.0f;
 
     for (int i = 0; i < num_iterations; ++i)
     {
         thrust::sequence(dev_arr.begin(), dev_arr.end());
+        auto dev_arr_ptr = thrust::raw_pointer_cast(dev_arr.data());
         auto start_thread_linear = std::chrono::high_resolution_clock::now();
-        result_thread_linear = reduce_vanilla(dev_arr, arr_size);
+        reduce_thread_linear(dev_arr_ptr, arr_size);
         auto end_thread_linear = std::chrono::high_resolution_clock::now();
+        result_thread_linear = dev_arr[0];
         total_time_thread_linear += std::chrono::duration<float, std::milli>(end_thread_linear - start_thread_linear).count();
     }
 
     float avg_time_thread_linear = total_time_thread_linear / num_iterations;
-
-    // Calculate bandwidth
     float bandwidth_thread_linear = (bytes_transferred / (avg_time_thread_linear / 1000.0f)) / (1 << 30); // GB/s
 
     std::cout << "*************************************************" << std::endl;
@@ -102,48 +101,29 @@ int main(int argc, char *argv[])
     std::cout << "Average Runtime: " << avg_time_thread_linear << " ms" << std::endl;
     std::cout << "Achieved Bandwidth: " << bandwidth_thread_linear << " GB/s" << std::endl;
 #endif
+
 #ifndef NO_SHARED
     /***********************************************************
      *                 3. Shared Memory Reduction              *            
      ***********************************************************/
-
-    int device_id;
-    cudaGetDevice(&device_id);
-
-    cudaDeviceProp device_prop;
-    cudaGetDeviceProperties(&device_prop, device_id);
-
-    int shared_mem_per_thread = device_prop.sharedMemPerBlock / device_prop.maxThreadsPerBlock;
-
-    std::cout << "*************************************************" << std::endl;
-    std::cout << "*          Device Shared Memory Info            *" << std::endl;
-    std::cout << "*************************************************" << std::endl;
-
-    std::cout << "Device Name: " << device_prop.name << std::endl;
-    std::cout << "Total Global Memory: " << device_prop.totalGlobalMem / (1 << 20) << " MB" << std::endl;
-    std::cout << "Shared Memory Per Block: " << device_prop.sharedMemPerBlock / (1 << 10) << " KB" << std::endl;
-    std::cout << "Max Threads Per Block: " << device_prop.maxThreadsPerBlock << std::endl;
-    std::cout << "Max Threads Per Multiprocessor: " << device_prop.maxThreadsPerMultiProcessor << std::endl;
-    std::cout << "Shared Memory Per Thread: " << shared_mem_per_thread << " bytes" << std::endl;
-
     float total_time_shared = 0.0f;
     float result_shared = 0.0f;
-    int shared_grid_size = (arr_size + MAX_BLOCK_SIZE - 1) / MAX_BLOCK_SIZE;
-    thrust::device_vector<float> shared_block_sum(shared_grid_size);
-    
+    thrust::device_vector<float> shared_block_sum((arr_size + MAX_BLOCK_SIZE - 1) / MAX_BLOCK_SIZE);
+
     for (int i = 0; i < num_iterations; ++i)
     {
         thrust::sequence(dev_arr.begin(), dev_arr.end());
         thrust::fill(shared_block_sum.begin(), shared_block_sum.end(), 0.0f);
+        auto dev_arr_ptr = thrust::raw_pointer_cast(dev_arr.data());
+        auto shared_block_sum_ptr = thrust::raw_pointer_cast(shared_block_sum.data());
         auto start_shared = std::chrono::high_resolution_clock::now();
-        result_shared = reduce_shared(dev_arr, shared_block_sum, arr_size);
+        reduce_shared(dev_arr_ptr, shared_block_sum_ptr, arr_size);
         auto end_shared = std::chrono::high_resolution_clock::now();
+        result_shared = dev_arr[0];
         total_time_shared += std::chrono::duration<float, std::milli>(end_shared - start_shared).count();
     }
 
     float avg_time_shared = total_time_shared / num_iterations;
-
-    // Calculate bandwidth
     float bandwidth_shared = (bytes_transferred / (avg_time_shared / 1000.0f)) / (1 << 30); // GB/s
 
     std::cout << "*************************************************" << std::endl;
@@ -154,12 +134,12 @@ int main(int argc, char *argv[])
     std::cout << "Array Size: " << arr_size << std::endl;
     std::cout << "Average Runtime: " << avg_time_shared << " ms" << std::endl;
     std::cout << "Achieved Bandwidth: " << bandwidth_shared << " GB/s" << std::endl;
-#endif 
+#endif
+
 #ifndef NO_SHARED_LINEAR
     /***********************************************************
      *           4. Shared Memory + Linear Reduction           *            
      ***********************************************************/
-
     float total_time_shared_linear = 0.0f;
     float result_shared_linear = 0.0f;
     thrust::device_vector<float> shared_linear_block_sum(MAX_GRID_SIZE);
@@ -168,15 +148,16 @@ int main(int argc, char *argv[])
     {
         thrust::sequence(dev_arr.begin(), dev_arr.end());
         thrust::fill(shared_linear_block_sum.begin(), shared_linear_block_sum.end(), 0.0f);
+        auto dev_arr_ptr = thrust::raw_pointer_cast(dev_arr.data());
+        auto shared_linear_block_sum_ptr = thrust::raw_pointer_cast(shared_linear_block_sum.data());
         auto start_shared_linear = std::chrono::high_resolution_clock::now();
-        result_shared_linear = reduce_shared_linear(dev_arr, shared_linear_block_sum, arr_size);
+        reduce_shared_linear(dev_arr_ptr, shared_linear_block_sum_ptr, arr_size);
         auto end_shared_linear = std::chrono::high_resolution_clock::now();
+        result_shared_linear = dev_arr[0];
         total_time_shared_linear += std::chrono::duration<float, std::milli>(end_shared_linear - start_shared_linear).count();
     }
 
     float avg_time_shared_linear = total_time_shared_linear / num_iterations;
-
-    // Calculate bandwidth
     float bandwidth_shared_linear = (bytes_transferred / (avg_time_shared_linear / 1000.0f)) / (1 << 30); // GB/s
 
     std::cout << "*************************************************" << std::endl;
@@ -188,7 +169,11 @@ int main(int argc, char *argv[])
     std::cout << "Average Runtime: " << avg_time_shared_linear << " ms" << std::endl;
     std::cout << "Achieved Bandwidth: " << bandwidth_shared_linear << " GB/s" << std::endl;
 #endif
+
 #ifndef NO_WARP_UNROLL
+    /***********************************************************
+     *           5. Warp Unrolling Reduction                  *            
+     ***********************************************************/
     float total_time_warp_unroll = 0.0f;
     float result_warp_unroll = 0.0f;
     thrust::device_vector<float> warp_unroll_block_sum(MAX_GRID_SIZE);
@@ -197,15 +182,16 @@ int main(int argc, char *argv[])
     {
         thrust::sequence(dev_arr.begin(), dev_arr.end());
         thrust::fill(warp_unroll_block_sum.begin(), warp_unroll_block_sum.end(), 0.0f);
+        auto dev_arr_ptr = thrust::raw_pointer_cast(dev_arr.data());
+        auto warp_unroll_block_sum_ptr = thrust::raw_pointer_cast(warp_unroll_block_sum.data());
         auto start_warp_unroll = std::chrono::high_resolution_clock::now();
-        result_warp_unroll = reduce_warp_unroll(dev_arr, warp_unroll_block_sum, arr_size);
+        reduce_warp_unroll(dev_arr_ptr, warp_unroll_block_sum_ptr, arr_size);
         auto end_warp_unroll = std::chrono::high_resolution_clock::now();
+        result_warp_unroll = dev_arr[0];
         total_time_warp_unroll += std::chrono::duration<float, std::milli>(end_warp_unroll - start_warp_unroll).count();
     }
 
     float avg_time_warp_unroll = total_time_warp_unroll / num_iterations;
-
-    // Calculate bandwidth
     float bandwidth_warp_unroll = (bytes_transferred / (avg_time_warp_unroll / 1000.0f)) / (1 << 30); // GB/s
 
     std::cout << "*************************************************" << std::endl;
@@ -217,9 +203,10 @@ int main(int argc, char *argv[])
     std::cout << "Average Runtime: " << avg_time_warp_unroll << " ms" << std::endl;
     std::cout << "Achieved Bandwidth: " << bandwidth_warp_unroll << " GB/s" << std::endl;
 #endif
+
 #ifndef NO_FULL_UNROLL
     /***********************************************************
-     *           5. Full Unrolling Reduction                  *            
+     *           6. Full Unrolling Reduction                  *            
      ***********************************************************/
     float total_time_full_unroll = 0.0f;
     float result_full_unroll = 0.0f;    
@@ -228,13 +215,15 @@ int main(int argc, char *argv[])
     {
         thrust::sequence(dev_arr.begin(), dev_arr.end());
         thrust::fill(full_unroll_block_sum.begin(), full_unroll_block_sum.end(), 0.0f);
+        auto dev_arr_ptr = thrust::raw_pointer_cast(dev_arr.data());
+        auto full_unroll_block_sum_ptr = thrust::raw_pointer_cast(full_unroll_block_sum.data());
         auto start_full_unroll = std::chrono::high_resolution_clock::now();
-        result_full_unroll = reduce_full_unroll(dev_arr, full_unroll_block_sum, arr_size);
+        reduce_full_unroll(dev_arr_ptr, full_unroll_block_sum_ptr, arr_size);
         auto end_full_unroll = std::chrono::high_resolution_clock::now();
+        result_full_unroll = dev_arr[0];
         total_time_full_unroll += std::chrono::duration<float, std::milli>(end_full_unroll - start_full_unroll).count();
     }
     float avg_time_full_unroll = total_time_full_unroll / num_iterations;
-    // Calculate bandwidth
     float bandwidth_full_unroll = (bytes_transferred / (avg_time_full_unroll / 1000.0f)) / (1 << 30); // GB/s
     std::cout << "*************************************************" << std::endl;
     std::cout << "*           Full Unrolling Reduction             *" << std::endl;

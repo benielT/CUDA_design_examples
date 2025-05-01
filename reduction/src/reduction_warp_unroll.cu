@@ -41,16 +41,13 @@ __global__ void reduce_warp_unroll_kernel(float *arr, float *block_sum, int arr_
     }
 }
 
-float reduce_warp_unroll(thrust::device_vector<float> dev_arr, thrust::device_vector<float> block_sum, int arr_size)
+void reduce_warp_unroll(float* dev_arr, float* block_sum, int arr_size)
 {
 
     reduce_warp_unroll_kernel<<<MAX_GRID_SIZE, MAX_BLOCK_SIZE, MAX_BLOCK_SIZE * sizeof(float)>>>(
-        dev_arr.data().get(),block_sum.data().get(),arr_size);
+        dev_arr,block_sum,arr_size);
 
     reduce_warp_unroll_kernel<<<1, MAX_GRID_SIZE, MAX_GRID_SIZE * sizeof(float)>>>(
-        block_sum.data().get(), dev_arr.data().get(), MAX_GRID_SIZE);
+        block_sum, dev_arr, MAX_GRID_SIZE);
     cudaDeviceSynchronize();
-
-    float result = dev_arr[0];
-    return result;
 }
