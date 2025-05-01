@@ -11,3 +11,4 @@
 #include <reduction_vanilla.cuh>
 #include <reduction_thread_linear_addressing.cuh>
 #include <reduction_shared_memory.cuh>
+#include <reduction_shared_linear.cuh>

@@ -155,6 +155,39 @@ int main(int argc, char *argv[])
     std::cout << "Average Runtime: " << avg_time_shared << " ms" << std::endl;
     std::cout << "Achieved Bandwidth: " << bandwidth_shared << " GB/s" << std::endl;
 #endif 
+#ifndef NO_SHARED_LINEAR
+    /***********************************************************
+     *           4. Shared Memory + Linear Reduction           *            
+     ***********************************************************/
+
+    float total_time_shared_linear = 0.0f;
+    float result_shared_linear = 0.0f;
+    thrust::device_vector<float> shared_linear_block_sum(MAX_GRID_SIZE);
+
+    for (int i = 0; i < num_iterations; ++i)
+    {
+        thrust::sequence(dev_arr.begin(), dev_arr.end());
+        thrust::fill(shared_linear_block_sum.begin(), shared_linear_block_sum.end(), 0.0f);
+        auto start_shared_linear = std::chrono::high_resolution_clock::now();
+        result_shared_linear = reduce_shared_linear(dev_arr, shared_linear_block_sum, arr_size);
+        auto end_shared_linear = std::chrono::high_resolution_clock::now();
+        total_time_shared_linear += std::chrono::duration<float, std::milli>(end_shared_linear - start_shared_linear).count();
+    }
+
+    float avg_time_shared_linear = total_time_shared_linear / num_iterations;
+
+    // Calculate bandwidth
+    float bandwidth_shared_linear = (bytes_transferred / (avg_time_shared_linear / 1000.0f)) / (1 << 30); // GB/s
+
+    std::cout << "*************************************************" << std::endl;
+    std::cout << "*           Shared Memory + Linear Reduction    *" << std::endl;
+    std::cout << "*************************************************" << std::endl;
+
+    std::cout << "Result: " << result_shared_linear << std::endl;
+    std::cout << "Array Size: " << arr_size << std::endl;
+    std::cout << "Average Runtime: " << avg_time_shared_linear << " ms" << std::endl;
+    std::cout << "Achieved Bandwidth: " << bandwidth_shared_linear << " GB/s" << std::endl;
+#endif
 
     return 0;
 }
