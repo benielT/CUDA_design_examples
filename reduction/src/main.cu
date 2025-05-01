@@ -102,6 +102,59 @@ int main(int argc, char *argv[])
     std::cout << "Average Runtime: " << avg_time_thread_linear << " ms" << std::endl;
     std::cout << "Achieved Bandwidth: " << bandwidth_thread_linear << " GB/s" << std::endl;
 #endif
+#ifndef NO_SHARED
+    /***********************************************************
+     *                 3. Shared Memory Reduction              *            
+     ***********************************************************/
+
+    int device_id;
+    cudaGetDevice(&device_id);
+
+    cudaDeviceProp device_prop;
+    cudaGetDeviceProperties(&device_prop, device_id);
+
+    int shared_mem_per_thread = device_prop.sharedMemPerBlock / device_prop.maxThreadsPerBlock;
+
+    std::cout << "*************************************************" << std::endl;
+    std::cout << "*          Device Shared Memory Info            *" << std::endl;
+    std::cout << "*************************************************" << std::endl;
+
+    std::cout << "Device Name: " << device_prop.name << std::endl;
+    std::cout << "Total Global Memory: " << device_prop.totalGlobalMem / (1 << 20) << " MB" << std::endl;
+    std::cout << "Shared Memory Per Block: " << device_prop.sharedMemPerBlock / (1 << 10) << " KB" << std::endl;
+    std::cout << "Max Threads Per Block: " << device_prop.maxThreadsPerBlock << std::endl;
+    std::cout << "Max Threads Per Multiprocessor: " << device_prop.maxThreadsPerMultiProcessor << std::endl;
+    std::cout << "Shared Memory Per Thread: " << shared_mem_per_thread << " bytes" << std::endl;
+
+    float total_time_shared = 0.0f;
+    float result_shared = 0.0f;
+    int shared_grid_size = (arr_size + MAX_BLOCK_SIZE - 1) / MAX_BLOCK_SIZE;
+    thrust::device_vector<float> shared_block_sum(shared_grid_size);
+    
+    for (int i = 0; i < num_iterations; ++i)
+    {
+        thrust::sequence(dev_arr.begin(), dev_arr.end());
+        thrust::fill(shared_block_sum.begin(), shared_block_sum.end(), 0.0f);
+        auto start_shared = std::chrono::high_resolution_clock::now();
+        result_shared = reduce_shared(dev_arr, shared_block_sum, arr_size);
+        auto end_shared = std::chrono::high_resolution_clock::now();
+        total_time_shared += std::chrono::duration<float, std::milli>(end_shared - start_shared).count();
+    }
+
+    float avg_time_shared = total_time_shared / num_iterations;
+
+    // Calculate bandwidth
+    float bandwidth_shared = (bytes_transferred / (avg_time_shared / 1000.0f)) / (1 << 30); // GB/s
+
+    std::cout << "*************************************************" << std::endl;
+    std::cout << "*                 Shared Memory Reduction       *" << std::endl;
+    std::cout << "*************************************************" << std::endl;
+
+    std::cout << "Result: " << result_shared << std::endl;
+    std::cout << "Array Size: " << arr_size << std::endl;
+    std::cout << "Average Runtime: " << avg_time_shared << " ms" << std::endl;
+    std::cout << "Achieved Bandwidth: " << bandwidth_shared << " GB/s" << std::endl;
+#endif 
 
     return 0;
 }
