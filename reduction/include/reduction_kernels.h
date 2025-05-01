@@ -7,5 +7,6 @@
 #include <cuda_runtime.h>
 #include <thrust/host_vector.h>
 #include <thrust/device_vector.h>
+#include <reduction_cpu.h>
 #include <reduction_vanilla.cuh>
 #include <reduction_thread_linear_addressing.cuh>

@@ -7,12 +7,41 @@
 
 int main(int argc, char *argv[])
 {
-    int arr_size = 1 << 20;
+    int arr_size = 1 << 24;
     thrust::device_vector<float> dev_arr(arr_size);
+    thrust::host_vector<float> host_arr(arr_size);
     thrust::sequence(dev_arr.begin(), dev_arr.end());
 
-    const int num_iterations = 100;
+    const int num_iterations = 10000;
+    size_t bytes_transferred = arr_size * sizeof(float);
 
+#ifndef NO_CPU
+    /***********************************************************
+     *                   0. CPU Reduction                      *            
+     ***********************************************************/
+    float total_time_cpu = 0.0f;
+    float result_cpu = 0.0f;
+    for (int i = 0; i < num_iterations; ++i)
+    {
+        thrust::sequence(host_arr.begin(), host_arr.end());
+        auto start_cpu = std::chrono::high_resolution_clock::now();
+        result_cpu = reduce_cpu(host_arr, arr_size);
+        auto end_cpu = std::chrono::high_resolution_clock::now();
+        total_time_cpu += std::chrono::duration<float, std::milli>(end_cpu - start_cpu).count();
+    }
+    float avg_time_cpu = total_time_cpu / num_iterations;
+    // Calculate bandwidth
+    float bandwidth_cpu = (bytes_transferred / (avg_time_cpu / 1000.0f)) / (1 << 30); // GB/s
+    std::cout << "*************************************************" << std::endl;
+    std::cout << "*                   CPU Reduction               *" << std::endl;
+    std::cout << "*************************************************" << std::endl;
+    std::cout << "Result: " << result_cpu << std::endl;
+    std::cout << "Array Size: " << arr_size << std::endl;
+    std::cout << "Average Runtime: " << avg_time_cpu << " ms" << std::endl;
+    std::cout << "Achieved Bandwidth: " << bandwidth_cpu << " GB/s" << std::endl;
+#endif
+
+#ifndef NO_VANILLA
     /***********************************************************
      *                 1. Vanilla Reduction                    *            
      ***********************************************************/
@@ -31,7 +60,6 @@ int main(int argc, char *argv[])
     float avg_time_vanilla = total_time_vanilla / num_iterations;
 
     // Calculate bandwidth
-    size_t bytes_transferred = arr_size * sizeof(float);
     float bandwidth_vanilla = (bytes_transferred / (avg_time_vanilla / 1000.0f)) / (1 << 30); // GB/s
 
     std::cout << "*************************************************" << std::endl;
@@ -42,8 +70,8 @@ int main(int argc, char *argv[])
     std::cout << "Array Size: " << arr_size << std::endl;
     std::cout << "Average Runtime: " << avg_time_vanilla << " ms" << std::endl;
     std::cout << "Achieved Bandwidth: " << bandwidth_vanilla << " GB/s" << std::endl;
-
-
+#endif
+#ifndef NO_THREAD_LINEAR
     /***********************************************************
      *           2. Thread Linear Addressing Reduction         *            
      ***********************************************************/
@@ -73,30 +101,7 @@ int main(int argc, char *argv[])
     std::cout << "Array Size: " << arr_size << std::endl;
     std::cout << "Average Runtime: " << avg_time_thread_linear << " ms" << std::endl;
     std::cout << "Achieved Bandwidth: " << bandwidth_thread_linear << " GB/s" << std::endl;
+#endif
 
-
-    /***********************************************************
-     *                 3. Shared Memory Reduction              *            
-     ***********************************************************/
-
-    int device_id;
-    cudaGetDevice(&device_id);
-
-    cudaDeviceProp device_prop;
-    cudaGetDeviceProperties(&device_prop, device_id);
-
-    int shared_mem_per_thread = device_prop.sharedMemPerBlock / device_prop.maxThreadsPerBlock;
-
-    std::cout << "*************************************************" << std::endl;
-    std::cout << "*          Device Shared Memory Info            *" << std::endl;
-    std::cout << "*************************************************" << std::endl;
-
-    std::cout << "Device Name: " << device_prop.name << std::endl;
-    std::cout << "Total Global Memory: " << device_prop.totalGlobalMem / (1 << 20) << " MB" << std::endl;
-    std::cout << "Shared Memory Per Block: " << device_prop.sharedMemPerBlock / (1 << 10) << " KB" << std::endl;
-    std::cout << "Max Threads Per Block: " << device_prop.maxThreadsPerBlock << std::endl;
-    std::cout << "Max Threads Per Multiprocessor: " << device_prop.maxThreadsPerMultiProcessor << std::endl;
-    std::cout << "Shared Memory Per Thread: " << shared_mem_per_thread << " bytes" << std::endl;
-    
     return 0;
 }

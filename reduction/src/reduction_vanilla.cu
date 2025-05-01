@@ -19,3 +19,13 @@ float reduce_vanilla(thrust::device_vector<float> dev_arr, int arr_size)
     float result = dev_arr[0];
     return result;
 }
+
+float reduce_cpu(thrust::host_vector<float> arr, int arr_size)
+{
+    float result = 0;
+    for (int i = 0; i < arr_size; i++)
+    {
+        result += arr[i];
+    }
+    return result;
+}
