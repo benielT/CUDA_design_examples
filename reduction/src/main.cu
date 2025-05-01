@@ -188,6 +188,35 @@ int main(int argc, char *argv[])
     std::cout << "Average Runtime: " << avg_time_shared_linear << " ms" << std::endl;
     std::cout << "Achieved Bandwidth: " << bandwidth_shared_linear << " GB/s" << std::endl;
 #endif
+#ifndef NO_WARP_UNROLL
+    float total_time_warp_unroll = 0.0f;
+    float result_warp_unroll = 0.0f;
+    thrust::device_vector<float> warp_unroll_block_sum(MAX_GRID_SIZE);
+
+    for (int i = 0; i < num_iterations; ++i)
+    {
+        thrust::sequence(dev_arr.begin(), dev_arr.end());
+        thrust::fill(warp_unroll_block_sum.begin(), warp_unroll_block_sum.end(), 0.0f);
+        auto start_warp_unroll = std::chrono::high_resolution_clock::now();
+        result_warp_unroll = reduce_warp_unroll(dev_arr, warp_unroll_block_sum, arr_size);
+        auto end_warp_unroll = std::chrono::high_resolution_clock::now();
+        total_time_warp_unroll += std::chrono::duration<float, std::milli>(end_warp_unroll - start_warp_unroll).count();
+    }
+
+    float avg_time_warp_unroll = total_time_warp_unroll / num_iterations;
+
+    // Calculate bandwidth
+    float bandwidth_warp_unroll = (bytes_transferred / (avg_time_warp_unroll / 1000.0f)) / (1 << 30); // GB/s
+
+    std::cout << "*************************************************" << std::endl;
+    std::cout << "*           Warp Unrolling Reduction            *" << std::endl;
+    std::cout << "*************************************************" << std::endl;
+
+    std::cout << "Result: " << result_warp_unroll << std::endl;
+    std::cout << "Array Size: " << arr_size << std::endl;
+    std::cout << "Average Runtime: " << avg_time_warp_unroll << " ms" << std::endl;
+    std::cout << "Achieved Bandwidth: " << bandwidth_warp_unroll << " GB/s" << std::endl;
+#endif
 
     return 0;
 }
