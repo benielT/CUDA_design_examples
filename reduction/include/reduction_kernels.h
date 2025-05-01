@@ -13,3 +13,4 @@
 #include <reduction_shared_memory.cuh>
 #include <reduction_shared_linear.cuh>
 #include <reduction_warp_unroll.cuh>
+#include <reduction_full_unroll.cuh>
