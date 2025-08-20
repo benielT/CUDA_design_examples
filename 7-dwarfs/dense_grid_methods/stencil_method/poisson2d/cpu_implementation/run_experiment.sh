@@ -2,9 +2,9 @@
 
 # Parameter sets: "size_x,size_y,iterations"
 parameter_sets=(
-    "30,30,5000"
-    "60,60,5000"
-    "100,100,5000"
+    "30,30,60000,4"
+    "60,60,60000,4"
+    "100,100,60000,4"
 )
 
 # Path to the executable
@@ -18,8 +18,8 @@ fi
 
 # Run the experiments
 for params in "${parameter_sets[@]}"; do
-    IFS=',' read -r size_x size_y iterations <<< "$params"
+    IFS=',' read -r size_x size_y iterations batch<<< "$params"
     echo "Running with size_x=$size_x, size_y=$size_y, iterations=$iterations"
-    $EXECUTABLE -sizex="$size_x" -sizey="$size_y" -iters="$iterations"
+    $EXECUTABLE -sizex="$size_x" -sizey="$size_y" -iters="$iterations" -batch="$batch"
     echo "------------------------------------"
 done
