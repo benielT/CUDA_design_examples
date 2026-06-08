@@ -2,7 +2,7 @@
 
 # Compiler and flags
 NVCC := nvcc
-CXXFLAGS := -Iinclude/ -std=c++17 -DNO_CPU #-DNO_VANILLA -DNO_THREAD_LINEAR -DNO_SHARED
+CXXFLAGS := -Iinclude/ -std=c++17 -DNO_CPU #-DNO_VANILLA -DNO_THREAD_LINEAR -DNO_SHARED -DNO_SHARED_LINEAR -DNO_WARP_UNROLL -DNO_FULL_UNROLL
 
 # Directories
 SRC_DIR := src
