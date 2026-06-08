@@ -253,6 +253,36 @@ int main(int argc, char *argv[])
     fstream << "Shared + Linear + Full Unroll," << arr_size << "," << avg_time_full_unroll << "," << bandwidth_full_unroll << "\n";
 #endif
 
+#ifndef NO_FULL_UNROLL_SYNCWARP
+    /***********************************************************
+     *           7. Full Unrolling Reduction Syncwarp           *            
+     ***********************************************************/
+    float total_time_full_unroll_syncwarp = 0.0f;
+    float result_full_unroll_syncwarp = 0.0f;    
+    thrust::device_vector<float> full_unroll_syncwarp_block_sum(MAX_GRID_SIZE);
+    for (int i = 0; i < num_iterations; ++i)
+    {
+        thrust::sequence(dev_arr.begin(), dev_arr.end());
+        thrust::fill(full_unroll_syncwarp_block_sum.begin(), full_unroll_syncwarp_block_sum.end(), 0.0f);
+        auto dev_arr_ptr = thrust::raw_pointer_cast(dev_arr.data());
+        auto full_unroll_syncwarp_block_sum_ptr = thrust::raw_pointer_cast(full_unroll_syncwarp_block_sum.data());
+        auto start_full_unroll_syncwarp = std::chrono::high_resolution_clock::now();
+        reduce_full_unroll_syncwarp(dev_arr_ptr, full_unroll_syncwarp_block_sum_ptr, arr_size);
+        auto end_full_unroll_syncwarp = std::chrono::high_resolution_clock::now();
+        result_full_unroll_syncwarp = dev_arr[0];
+        total_time_full_unroll_syncwarp += std::chrono::duration<float, std::milli>(end_full_unroll_syncwarp - start_full_unroll_syncwarp).count();
+    }
+    float avg_time_full_unroll_syncwarp = total_time_full_unroll_syncwarp / num_iterations;
+    float bandwidth_full_unroll_syncwarp = (bytes_transferred / (avg_time_full_unroll_syncwarp / 1000.0f)) / (1 << 30); // GB/s
+    std::cout << "*************************************************" << std::endl;
+    std::cout << "*           Full Unrolling Syncwarp Reduction   *" << std::endl;
+    std::cout << "*************************************************" << std::endl;
+    std::cout << "Result: " << result_full_unroll_syncwarp << std::endl;
+    std::cout << "Array Size: " << arr_size << std::endl;
+    std::cout << "Average Runtime: " << avg_time_full_unroll_syncwarp << " ms" << std::endl;
+    std::cout << "Achieved Bandwidth: " << bandwidth_full_unroll_syncwarp << " GB/s" << std::endl;
+    fstream << "Shared + Linear + Full Unroll Syncwarp," << arr_size << "," << avg_time_full_unroll_syncwarp << "," << bandwidth_full_unroll_syncwarp << "\n";
+#endif
     fstream.close();
 
     if (fstream.good()) { // Check if operations were successful after closing
