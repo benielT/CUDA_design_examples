@@ -319,7 +319,7 @@ int main(int argc, char *argv[])
 
 #ifndef NO_WARP_UNROLL_WARPSHUFL_ATOMICADD
     /***********************************************************
-     *   9. Full Unrolling Reduction Warp Shuffle Atomic Add   *            
+     *   9. Warp Unrolling Reduction Warp Shuffle Atomic Add   *            
      ***********************************************************/
     float total_time_warp_unroll_warpshufl_atomicadd = 0.0f;
     float result_warp_unroll_warpshufl_atomicadd = 0.0f;    
@@ -345,7 +345,38 @@ int main(int argc, char *argv[])
     std::cout << "Array Size: " << arr_size << std::endl;
     std::cout << "Average Runtime: " << avg_time_warp_unroll_warpshufl_atomicadd << " ms" << std::endl;
     std::cout << "Achieved Bandwidth: " << bandwidth_warp_unroll_warpshufl_atomicadd << " GB/s" << std::endl;
-    fstream << "Shared + Linear + Warp Unroll + Warpshufl + atomicAdd," << arr_size << "," << avg_time_warp_unroll_warpshufl_atomicadd << "," << bandwidth_warp_unroll_warpshufl_atomicadd << "\n";
+    fstream << "Linear + Warp Unroll + Warpshufl + atomicAdd," << arr_size << "," << avg_time_warp_unroll_warpshufl_atomicadd << "," << bandwidth_warp_unroll_warpshufl_atomicadd << "\n";
+#endif
+
+#ifndef NO_CGREDUCE_ATOMICADD
+    /***********************************************************
+     *              10. CG Reduction Atomic Add                *            
+     ***********************************************************/
+    float total_time_cgreduce_atomicadd = 0.0f;
+    float result_cgreduce_atomicadd = 0.0f;    
+    thrust::device_vector<float> cgreduce_atomicadd_block_sum(MAX_GRID_SIZE);
+    for (int i = 0; i < num_iterations; ++i)
+    {
+        thrust::sequence(dev_arr.begin(), dev_arr.end());
+        thrust::fill(cgreduce_atomicadd_block_sum.begin(), cgreduce_atomicadd_block_sum.end(), 0.0f);
+        auto dev_arr_ptr = thrust::raw_pointer_cast(dev_arr.data());
+        auto cgreduce_atomicadd_block_sum_ptr = thrust::raw_pointer_cast(cgreduce_atomicadd_block_sum.data());
+        auto start_cgreduce_atomicadd = std::chrono::high_resolution_clock::now();
+        reduce_cgreduce_atomicadd(dev_arr_ptr, cgreduce_atomicadd_block_sum_ptr, arr_size);
+        auto end_cgreduce_atomicadd = std::chrono::high_resolution_clock::now();
+        result_cgreduce_atomicadd = dev_arr[0];
+        total_time_cgreduce_atomicadd += std::chrono::duration<float, std::milli>(end_cgreduce_atomicadd - start_cgreduce_atomicadd).count();
+    }
+    float avg_time_cgreduce_atomicadd = total_time_cgreduce_atomicadd / num_iterations;
+    float bandwidth_cgreduce_atomicadd = (bytes_transferred / (avg_time_cgreduce_atomicadd / 1000.0f)) / (1 << 30); // GB/s
+    std::cout << "*************************************************" << std::endl;
+    std::cout << "*         CG Reduce AtomicAdd_block             *" << std::endl;
+    std::cout << "*************************************************" << std::endl;
+    std::cout << "Result: " << result_cgreduce_atomicadd << std::endl;
+    std::cout << "Array Size: " << arr_size << std::endl;
+    std::cout << "Average Runtime: " << avg_time_cgreduce_atomicadd << " ms" << std::endl;
+    std::cout << "Achieved Bandwidth: " << bandwidth_cgreduce_atomicadd << " GB/s" << std::endl;
+    fstream << "Linear + CgReduce + atomicAdd," << arr_size << "," << avg_time_cgreduce_atomicadd << "," << bandwidth_cgreduce_atomicadd << "\n";
 #endif
 
     fstream.close();
