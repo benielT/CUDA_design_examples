@@ -8,7 +8,9 @@
 
 int main(int argc, char *argv[])
 {
-    int arr_size = 1 << 22;
+
+    int arr_size = (argc > 1) ? atoi(argv[1]) : 1 << 20;
+
     thrust::device_vector<float> dev_arr(arr_size);
     thrust::host_vector<float> host_arr(arr_size);
     thrust::sequence(dev_arr.begin(), dev_arr.end());
@@ -281,8 +283,71 @@ int main(int argc, char *argv[])
     std::cout << "Array Size: " << arr_size << std::endl;
     std::cout << "Average Runtime: " << avg_time_full_unroll_syncwarp << " ms" << std::endl;
     std::cout << "Achieved Bandwidth: " << bandwidth_full_unroll_syncwarp << " GB/s" << std::endl;
-    fstream << "Shared + Linear + Full Unroll Syncwarp," << arr_size << "," << avg_time_full_unroll_syncwarp << "," << bandwidth_full_unroll_syncwarp << "\n";
+    fstream << "Shared + Linear + Full Unroll + Syncwarp," << arr_size << "," << avg_time_full_unroll_syncwarp << "," << bandwidth_full_unroll_syncwarp << "\n";
 #endif
+
+#ifndef NO_FULL_UNROLL_WARPSHUFL
+    /***********************************************************
+    *          8. Full Unrolling Reduction Warp Shuffle        *            
+     ***********************************************************/
+    float total_time_full_unroll_warpshufl = 0.0f;
+    float result_full_unroll_warpshufl = 0.0f;    
+    thrust::device_vector<float> full_unroll_warpshufl_block_sum(MAX_GRID_SIZE);
+    for (int i = 0; i < num_iterations; ++i)
+    {
+        thrust::sequence(dev_arr.begin(), dev_arr.end());
+        thrust::fill(full_unroll_warpshufl_block_sum.begin(), full_unroll_warpshufl_block_sum.end(), 0.0f);
+        auto dev_arr_ptr = thrust::raw_pointer_cast(dev_arr.data());
+        auto full_unroll_warpshufl_block_sum_ptr = thrust::raw_pointer_cast(full_unroll_warpshufl_block_sum.data());
+        auto start_full_unroll_warpshufl = std::chrono::high_resolution_clock::now();
+        reduce_full_unroll_warpshufl(dev_arr_ptr, full_unroll_warpshufl_block_sum_ptr, arr_size);
+        auto end_full_unroll_warpshufl = std::chrono::high_resolution_clock::now();
+        result_full_unroll_warpshufl = dev_arr[0];
+        total_time_full_unroll_warpshufl += std::chrono::duration<float, std::milli>(end_full_unroll_warpshufl - start_full_unroll_warpshufl).count();
+    }
+    float avg_time_full_unroll_warpshufl = total_time_full_unroll_warpshufl / num_iterations;
+    float bandwidth_full_unroll_warpshufl = (bytes_transferred / (avg_time_full_unroll_warpshufl / 1000.0f)) / (1 << 30); // GB/s
+    std::cout << "*************************************************" << std::endl;
+    std::cout << "*           Full Unrolling Warpshufl Reduction   *" << std::endl;
+    std::cout << "*************************************************" << std::endl;
+    std::cout << "Result: " << result_full_unroll_warpshufl << std::endl;
+    std::cout << "Array Size: " << arr_size << std::endl;
+    std::cout << "Average Runtime: " << avg_time_full_unroll_warpshufl << " ms" << std::endl;
+    std::cout << "Achieved Bandwidth: " << bandwidth_full_unroll_warpshufl << " GB/s" << std::endl;
+    fstream << "Shared + Linear + Full Unroll + Warpshufl," << arr_size << "," << avg_time_full_unroll_warpshufl << "," << bandwidth_full_unroll_warpshufl << "\n";
+#endif
+
+#ifndef NO_WARP_UNROLL_WARPSHUFL_ATOMICADD
+    /***********************************************************
+     *   9. Full Unrolling Reduction Warp Shuffle Atomic Add   *            
+     ***********************************************************/
+    float total_time_warp_unroll_warpshufl_atomicadd = 0.0f;
+    float result_warp_unroll_warpshufl_atomicadd = 0.0f;    
+    thrust::device_vector<float> warp_unroll_warpshufl_atomicadd_block_sum(MAX_GRID_SIZE);
+    for (int i = 0; i < num_iterations; ++i)
+    {
+        thrust::sequence(dev_arr.begin(), dev_arr.end());
+        thrust::fill(warp_unroll_warpshufl_atomicadd_block_sum.begin(), warp_unroll_warpshufl_atomicadd_block_sum.end(), 0.0f);
+        auto dev_arr_ptr = thrust::raw_pointer_cast(dev_arr.data());
+        auto warp_unroll_warpshufl_atomicadd_block_sum_ptr = thrust::raw_pointer_cast(warp_unroll_warpshufl_atomicadd_block_sum.data());
+        auto start_warp_unroll_warpshufl_atomicadd = std::chrono::high_resolution_clock::now();
+        reduce_warp_unroll_warpshufl_atomicadd(dev_arr_ptr, warp_unroll_warpshufl_atomicadd_block_sum_ptr, arr_size);
+        auto end_warp_unroll_warpshufl_atomicadd = std::chrono::high_resolution_clock::now();
+        result_warp_unroll_warpshufl_atomicadd = dev_arr[0];
+        total_time_warp_unroll_warpshufl_atomicadd += std::chrono::duration<float, std::milli>(end_warp_unroll_warpshufl_atomicadd - start_warp_unroll_warpshufl_atomicadd).count();
+    }
+    float avg_time_warp_unroll_warpshufl_atomicadd = total_time_warp_unroll_warpshufl_atomicadd / num_iterations;
+    float bandwidth_warp_unroll_warpshufl_atomicadd = (bytes_transferred / (avg_time_warp_unroll_warpshufl_atomicadd / 1000.0f)) / (1 << 30); // GB/s
+    std::cout << "*************************************************" << std::endl;
+    std::cout << "*    Warp Unrolling Warpshufl AtomicAdd_block   *" << std::endl;
+    std::cout << "*************************************************" << std::endl;
+    std::cout << "Result: " << result_warp_unroll_warpshufl_atomicadd << std::endl;
+    std::cout << "Array Size: " << arr_size << std::endl;
+    std::cout << "Average Runtime: " << avg_time_warp_unroll_warpshufl_atomicadd << " ms" << std::endl;
+    std::cout << "Achieved Bandwidth: " << bandwidth_warp_unroll_warpshufl_atomicadd << " GB/s" << std::endl;
+    fstream << "Shared + Linear + Warp Unroll + Warpshufl + atomicAdd," << arr_size << "," << avg_time_warp_unroll_warpshufl_atomicadd << "," << bandwidth_warp_unroll_warpshufl_atomicadd << "\n";
+#endif
+
     fstream.close();
 
     if (fstream.good()) { // Check if operations were successful after closing

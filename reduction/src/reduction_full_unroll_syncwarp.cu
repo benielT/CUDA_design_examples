@@ -56,31 +56,23 @@ __global__ void reduce_full_unroll_syncwarp_kernel(float *arr, float *block_sum,
 
     __syncthreads();
 
-    // Reduction in shared memory
-    // for (int i = blockDim.x / 2; i > 32; i >>= 1) {
-    //     if (local_id < i) {
-    //         shared_arr[local_id] += shared_arr[local_id + i];
-    //     }
-    //     __syncthreads();
-    // }
-    if (blockSize >= 512){
-        if (local_id < 256) {  
+    if (blockSize > 512 && local_id < 512 && local_id + 512 < blockSize) {
+          shared_arr[local_id] += shared_arr[local_id + 512];
+    }
+    __syncthreads();
+    if (blockSize > 256 && local_id < 256 && local_id + 256 < blockSize) {
           shared_arr[local_id] += shared_arr[local_id + 256];
-        }
-        __syncthreads();
     }
-    if (blockSize >= 256){
-        if (local_id < 128) {  
+    __syncthreads();
+    if (blockSize > 128 && local_id < 128 && local_id + 128 < blockSize) {
           shared_arr[local_id] += shared_arr[local_id + 128];
-        }
-        __syncthreads();
     }
-    if (blockSize >= 128){
-        if (local_id < 64) {  
+    __syncthreads();
+
+    if (blockSize > 64 && local_id < 64 && local_id + 64 < blockSize) {
           shared_arr[local_id] += shared_arr[local_id + 64];
-        }
-        __syncthreads();
     }
+    __syncthreads();
 
     if (local_id < 32){
         // Instead of using custom warp unroll using __syncwarp();
@@ -91,14 +83,15 @@ __global__ void reduce_full_unroll_syncwarp_kernel(float *arr, float *block_sum,
         if (local_id < 4 )  shared_arr[local_id] += shared_arr[local_id + 4]; __syncwarp();
         if (local_id < 2 )  shared_arr[local_id] += shared_arr[local_id + 2]; __syncwarp();
         if (local_id < 1 )  shared_arr[local_id] += shared_arr[local_id + 1]; __syncwarp();
+        if (local_id == 0) block_sum[blockIdx.x] = shared_arr[0];
 // #else
         // warp_reduce<blockSize>(shared_arr, local_id);
 // #endif
     }
     
-    if (local_id == 0) {
-        block_sum[blockIdx.x] = shared_arr[0];
-    }
+    // if (local_id == 0) {
+    //     block_sum[blockIdx.x] = shared_arr[0];
+    // }
 }
 
 void reduce_full_unroll_syncwarp(float* dev_arr, float *block_sum, int arr_size)
