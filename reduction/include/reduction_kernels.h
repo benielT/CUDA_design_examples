@@ -20,3 +20,4 @@
 #include <reduction_full_unroll_warpshufl.cuh>
 #include <reduction_warp_unroll_warpshufl_atomicadd.cuh>
 #include <reduction_cgreduce_atomicadd.cuh>
+#include <reduction_cgreduce_atomicadd_vl.cuh>

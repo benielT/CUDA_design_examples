@@ -379,6 +379,38 @@ int main(int argc, char *argv[])
     fstream << "Linear + CgReduce + atomicAdd," << arr_size << "," << avg_time_cgreduce_atomicadd << "," << bandwidth_cgreduce_atomicadd << "\n";
 #endif
 
+
+#ifndef NO_CGREDUCE_ATOMICADD_VL
+    /***********************************************************
+     *      11. CG Reduction Atomic Add Vector Loading         *            
+     ***********************************************************/
+    float total_time_cgreduce_atomicadd_vl = 0.0f;
+    float result_cgreduce_atomicadd_vl = 0.0f;    
+    thrust::device_vector<float> cgreduce_atomicadd_vl_block_sum(MAX_GRID_SIZE);
+    for (int i = 0; i < num_iterations; ++i)
+    {
+        thrust::sequence(dev_arr.begin(), dev_arr.end());
+        thrust::fill(cgreduce_atomicadd_vl_block_sum.begin(), cgreduce_atomicadd_vl_block_sum.end(), 0.0f);
+        auto dev_arr_ptr = thrust::raw_pointer_cast(dev_arr.data());
+        auto cgreduce_atomicadd_vl_block_sum_ptr = thrust::raw_pointer_cast(cgreduce_atomicadd_vl_block_sum.data());
+        auto start_cgreduce_atomicadd_vl = std::chrono::high_resolution_clock::now();
+        reduce_cgreduce_atomicadd_vl(dev_arr_ptr, cgreduce_atomicadd_vl_block_sum_ptr, arr_size);
+        auto end_cgreduce_atomicadd_vl = std::chrono::high_resolution_clock::now();
+        result_cgreduce_atomicadd_vl = dev_arr[0];
+        total_time_cgreduce_atomicadd_vl += std::chrono::duration<float, std::milli>(end_cgreduce_atomicadd_vl - start_cgreduce_atomicadd_vl).count();
+    }
+    float avg_time_cgreduce_atomicadd_vl = total_time_cgreduce_atomicadd_vl / num_iterations;
+    float bandwidth_cgreduce_atomicadd_vl = (bytes_transferred / (avg_time_cgreduce_atomicadd_vl / 1000.0f)) / (1 << 30); // GB/s
+    std::cout << "*************************************************" << std::endl;
+    std::cout << "*     CG Reduce AtomicAdd_block atomicadd vl    *" << std::endl;
+    std::cout << "*************************************************" << std::endl;
+    std::cout << "Result: " << result_cgreduce_atomicadd_vl << std::endl;
+    std::cout << "Array Size: " << arr_size << std::endl;
+    std::cout << "Average Runtime: " << avg_time_cgreduce_atomicadd_vl << " ms" << std::endl;
+    std::cout << "Achieved Bandwidth: " << bandwidth_cgreduce_atomicadd_vl << " GB/s" << std::endl;
+    fstream << "Linear + CgReduce + atomicAdd + vl," << arr_size << "," << avg_time_cgreduce_atomicadd_vl << "," << bandwidth_cgreduce_atomicadd_vl << "\n";
+#endif
+
     fstream.close();
 
     if (fstream.good()) { // Check if operations were successful after closing
