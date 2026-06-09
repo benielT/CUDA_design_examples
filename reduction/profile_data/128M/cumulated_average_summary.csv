@@ -1,0 +1,7 @@
+Reduction Type,Array Size,Average Runtime (ms),Achieved Bandwidth (GB/s)
+Linear + CgReduce + atomicAdd,134217728.0,0.3027527,1651.53
+Linear + CgReduce + atomicAdd + vl,134217728.0,0.3004679,1664.0729999999999
+Linear + Warp Unroll + Warpshufl + atomicAdd,134217728.0,0.3024941,1652.94
+Shared + Linear + Full Unroll,134217728.0,0.3027075,1651.7599999999998
+Shared + Linear + Full Unroll + Syncwarp,134217728.0,0.3022269,1654.402
+Shared + Linear + Full Unroll + Warpshufl,134217728.0,0.3027189,1651.7130000000002
