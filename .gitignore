@@ -1,3 +1,5 @@
-.*.swp
-.*/bin/*
-.*/obj/*
+*.o
+*.swp
+**/bin/
+**/obj/
+**/.vscode/
